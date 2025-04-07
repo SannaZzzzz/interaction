@@ -14,6 +14,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     const basePath = process.env.NODE_ENV === "production" && 
@@ -38,14 +39,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
 
     if (videoRef.current) {
       videoRef.current.src = videoSrc;
-      
-      // 预加载视频
       videoRef.current.load();
-      
-      // 使用较低分辨率和帧率提高性能
-      if (typeof videoRef.current.playbackRate === 'number') {
-        videoRef.current.playbackRate = 1.0; // 正常速度
-      }
     }
 
     return () => {
@@ -61,12 +55,10 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
     if (!videoRef.current) return;
 
     if (isAnimating) {
-      // 重置视频到开始位置
       videoRef.current.currentTime = 0;
       
       const playVideo = async () => {
         try {
-          // 使用低延迟模式
           if (videoRef.current) {
             videoRef.current.muted = false;
             await videoRef.current.play();
@@ -90,13 +82,20 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
     setVideoLoaded(true);
     setVideoError(false);
     console.log("Video loaded successfully");
+    
+    // 获取视频的实际尺寸
+    if (videoRef.current) {
+      setVideoDimensions({
+        width: videoRef.current.videoWidth,
+        height: videoRef.current.videoHeight
+      });
+    }
   };
 
   const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     console.error("Video load error:", e);
     setVideoError(true);
     
-    // 尝试使用绝对路径作为回退
     if (videoRef.current && typeof window !== "undefined" && window.location.hostname.includes("github.io")) {
       const fallbackPath = "/interaction/animations/default-character.mp4";
       console.log("Trying fallback path:", fallbackPath);
@@ -105,8 +104,13 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
     }
   };
 
+  // 计算视频的宽高比，但放大比例
+  const aspectRatio = videoDimensions.height > 0 ? videoDimensions.width / videoDimensions.height : 9 / 16;
+  // 确保宽度在合理范围内，但允许更大的尺寸
+  const calculatedWidth = Math.max(aspectRatio * 120, 120); // 放大了20%
+
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div className="relative h-full flex items-center justify-center">
       {!videoLoaded && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-xl text-gray-400">加载角色动画中...</div>
@@ -119,16 +123,35 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
         </div>
       )}
       
-      <video
-        ref={videoRef}
-        className="max-w-full max-h-full object-contain"
-        playsInline
-        muted={!isAnimating}
-        loop={isAnimating}
-        onLoadedData={handleVideoLoaded}
-        onError={handleVideoError}
-        style={{ display: videoLoaded ? 'block' : 'none' }}
-      />
+      <div 
+        style={{ 
+          height: '100%',
+          width: `${calculatedWidth}%`,
+          minWidth: '350px',
+          maxWidth: '110%', // 允许稍微超出容器以适应更大尺寸
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          overflow: 'hidden'
+        }}
+      >
+        <video
+          ref={videoRef}
+          className="h-full"
+          playsInline
+          muted={!isAnimating}
+          loop={isAnimating}
+          onLoadedData={handleVideoLoaded}
+          onError={handleVideoError}
+          style={{ 
+            display: videoLoaded ? 'block' : 'none',
+            objectFit: 'contain',
+            width: 'auto',
+            height: '110%', // 稍微放大
+            maxWidth: 'none' // 允许视频超出容器宽度以保持原始比例
+          }}
+        />
+      </div>
       
       {isAnimating && videoLoaded && (
         <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 p-2 rounded">

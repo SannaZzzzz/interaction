@@ -22,36 +22,39 @@ export default function Home() {
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold text-center mb-8">千万职工共话经典主题活动之AI共话许振超</h1>
 
-        <div className="flex flex-col lg:flex-row items-start gap-6 max-w-[95%] mx-auto">
-          {/* 动画区域 - 9:16比例 - 主体 */}
-          <div className="w-full lg:w-[65%] bg-gray-800 rounded-lg shadow-lg p-4">
-            <h2 className="text-2xl font-semibold mb-4">虚拟许振超专家形象</h2>
-            <div className="border-2 border-gray-700 rounded-lg flex items-center justify-center" 
-                 style={{ aspectRatio: '9/16' }}>
-              <CharacterAnimation
-                character={character}
-                isAnimating={isAnimating}
-                response={aiResponse}
-              />
+        <div className="relative w-full h-[85vh] max-w-[98%] mx-auto">
+          {/* 动画区域 - 更靠左 */}
+          <div className="absolute top-[2%] left-[35%] transform -translate-x-1/2 w-auto h-[90%] flex flex-col items-center">
+            {/* 将标题放在动画框上方中央 */}
+            <h2 className="text-2xl font-semibold mb-2 text-center">虚拟许振超专家形象</h2>
+            
+            <div className="bg-gray-800 rounded-lg shadow-lg p-3 h-full">
+              <div className="border-2 border-gray-700 rounded-lg flex items-center justify-center h-full overflow-hidden">
+                <CharacterAnimation
+                  character={character}
+                  isAnimating={isAnimating}
+                  response={aiResponse}
+                />
+              </div>
             </div>
           </div>
 
-          {/* 对话区域 - 副要窄 */}
-          <div className="w-full lg:w-[35%] bg-gray-800 rounded-lg shadow-lg p-4 lg:h-full flex flex-col">
-            <h2 className="text-2xl font-semibold mb-4">专家对话</h2>
+          {/* 对话区域 - 右侧，底部对齐，宽度增加一半 */}
+          <div className="absolute bottom-[3%] right-[5%] w-[36%] bg-gray-800 rounded-lg shadow-lg p-3">
+            <h2 className="text-xl font-semibold mb-2">专家对话</h2>
 
-            <div className="flex-grow mb-4 h-80 lg:h-[calc(100%-11rem)] overflow-y-auto bg-gray-900 rounded-lg p-4">
+            <div className="h-32 overflow-y-auto bg-gray-900 rounded-lg p-3 mb-2">
               {userInput && (
-                <div className="mb-3">
-                  <p className="text-sm text-gray-400">你：</p>
-                  <p className="bg-gray-700 rounded-lg p-2">{userInput}</p>
+                <div className="mb-2">
+                  <p className="text-xs text-gray-400">你：</p>
+                  <p className="bg-gray-700 rounded-lg p-1 text-sm">{userInput}</p>
                 </div>
               )}
 
               {aiResponse && (
-                <div className="mb-3">
-                  <p className="text-sm text-gray-400">虚拟许振超：</p>
-                  <p className="bg-blue-900 rounded-lg p-2">{aiResponse}</p>
+                <div className="mb-2">
+                  <p className="text-xs text-gray-400">虚拟许振超：</p>
+                  <p className="bg-blue-900 rounded-lg p-1 text-sm">{aiResponse}</p>
                 </div>
               )}
             </div>
