@@ -194,14 +194,14 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
               console.log('语音识别已启动');
             } catch (e) {
               console.error('启动语音识别失败:', e);
-              setError(`启动语音识别失败: ${e.message || '未知错误'}，请刷新页面重试`);
+              setError(`启动语音识别失败: ${e instanceof Error ? e.message : '未知错误'}，请刷新页面重试`);
               setIsListening(false);
             }
           }, 300);
         });
       } catch (e) {
         console.error('启动语音识别失败:', e);
-        setError('启动语音识别失败，请刷新页面重试');
+        setError(`启动语音识别失败: ${e instanceof Error ? e.message : '未知错误'}，请刷新页面重试`);
         setIsListening(false);
       }
     } else {
