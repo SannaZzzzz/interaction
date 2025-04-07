@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import AudioRecorder from '../components/AudioRecorder';
+import BrowserSpeechRecognition from '../components/BrowserSpeechRecognition';
 import CharacterAnimation from '../components/CharacterAnimation';
 import AIResponse from '../components/AIResponse';
 
 export default function Home() {
   const [userInput, setUserInput] = useState('');
   const [aiResponse, setAiResponse] = useState('');
-  const [isRecording, setIsRecording] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const character = 'default'; // 默认使用默认角色
@@ -69,10 +69,10 @@ export default function Home() {
 
             <div className="mt-auto">
               {isClient && (
-                <AudioRecorder
+                <BrowserSpeechRecognition
                   onResult={setUserInput}
-                  isRecording={isRecording}
-                  setIsRecording={setIsRecording}
+                  isListening={isListening}
+                  setIsListening={setIsListening}
                 />
               )}
 
@@ -125,10 +125,10 @@ export default function Home() {
 
             <div className="mt-2">
               {isClient && (
-                <AudioRecorder
+                <BrowserSpeechRecognition
                   onResult={setUserInput}
-                  isRecording={isRecording}
-                  setIsRecording={setIsRecording}
+                  isListening={isListening}
+                  setIsListening={setIsListening}
                 />
               )}
 
