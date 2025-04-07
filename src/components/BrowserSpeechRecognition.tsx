@@ -102,12 +102,24 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       
       // 配置识别器
       recognition.lang = 'zh-CN';
-      recognition.continuous = false;  // 一次识别一段话，完整性更好
+      recognition.continuous = true;  // 持续识别模式
       recognition.interimResults = true;  // 允许中间结果
       recognition.maxAlternatives = 1;
       
+      // 设置更长的SpeechRecognitionEvent超时时间
+      try {
+        // @ts-ignore - 某些浏览器支持此属性
+        recognition.speechRecognitionListTimeout = 10000; // 10秒
+      } catch (e) {
+        // 忽略不支持的浏览器
+        console.log('浏览器不支持设置speechRecognitionListTimeout');
+      }
+      
       // 初始化结果
       resultRef.current = '';
+      
+      // 初始化结果变量
+      let accumulatedText = resultRef.current;
       
       // 处理结果
       recognition.onresult = (event: any) => {
@@ -123,12 +135,20 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
           }
         }
         
+        // 更新最终结果
         if (final) {
-          resultRef.current = final;
-          console.log('最终识别结果:', final);
-          setStatus('');
-        } else if (interim) {
-          setStatus(`正在识别: ${interim}`);
+          // 累积文本，而不是替换
+          accumulatedText += final;
+          resultRef.current = accumulatedText;
+          console.log('累积识别结果:', accumulatedText);
+          // 不要在这里停止识别，等待用户主动停止
+        }
+        
+        // 显示中间结果
+        if (interim) {
+          setStatus(`正在识别: ${accumulatedText}${interim}`);
+        } else {
+          setStatus(`已识别: ${accumulatedText}`);
         }
       };
       
@@ -145,11 +165,51 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
         } else if (event.error === 'network') {
           setError('网络错误，请检查网络连接');
         } else if (event.error === 'aborted') {
-          // 对于aborted错误，我们可以尝试保持当前结果
-          if (resultRef.current) {
-            console.log('识别被中断，但已有部分结果:', resultRef.current);
+          // 对于aborted错误，自动重新启动识别
+          if (isListening) {
+            console.log('识别被中断，尝试自动重启...');
+            
+            // 尝试自动重启识别而不中断用户的输入
+            setTimeout(() => {
+              try {
+                if (isListening) { // 再次检查是否仍然在监听状态
+                  // 创建新的识别器并保持之前结果
+                  const newRecognition = new SpeechRecognitionAPI();
+                  recognitionRef.current = newRecognition;
+                  
+                  // 配置识别器
+                  newRecognition.lang = 'zh-CN';
+                  newRecognition.continuous = true;  // 持续识别模式
+                  newRecognition.interimResults = true;  // 允许中间结果
+                  newRecognition.maxAlternatives = 1;
+                  
+                  // 复制相同的事件处理程序
+                  newRecognition.onresult = recognition.onresult;
+                  newRecognition.onerror = recognition.onerror;
+                  newRecognition.onend = recognition.onend;
+                  
+                  // 启动新的识别器
+                  newRecognition.start();
+                  setStatus(`识别自动重启 - 已识别: ${resultRef.current}`);
+                }
+              } catch (e) {
+                console.error('重启识别时出错:', e);
+                // 如果重启失败，保留已有结果
+                if (resultRef.current) {
+                  console.log('重启失败，但已有结果:', resultRef.current);
+                } else {
+                  setError('识别重启失败，请手动点击按钮重试');
+                  setIsListening(false);
+                }
+              }
+            }, 300);
           } else {
-            setError('识别被中断，请稍后重试');
+            // 如果不再监听状态，就不自动重启
+            if (resultRef.current) {
+              console.log('识别被中断，但已有部分结果:', resultRef.current);
+            } else {
+              setError('识别被中断，请重新点击按钮开始');
+            }
           }
         } else {
           setError(`语音识别错误: ${event.error}`);
@@ -160,14 +220,19 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       recognition.onend = () => {
         console.log('语音识别结束');
         
-        // 如果有结果，传递给父组件
-        if (resultRef.current) {
-          onResult(resultRef.current);
+        // 如果用户导致的结束（点击按钮停止）
+        if (!isListening) {
+          // 如果有结果，传递给父组件
+          if (resultRef.current) {
+            onResult(resultRef.current);
+          }
+          setStatus('');
+        } else {
+          // 如果是自动结束（可能是因为超时或其他原因）
+          // 这里我们不设置状态，因为我们在onerror的aborted处理中
+          // 可能会尝试重启识别
+          console.log('识别强制结束，保留当前结果:', resultRef.current);
         }
-        
-        // 重置状态
-        setIsListening(false);
-        setStatus('');
       };
       
       // 开始识别
@@ -196,7 +261,6 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   // 处理开始/停止监听
   const handleToggleListening = async () => {
     setError('');
-    setStatus('');
     
     // 检查兼容性
     if (!checkCompatibility()) return;
@@ -207,8 +271,31 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       if (!hasPermission) return;
     }
     
-    // 切换监听状态
-    setIsListening(!isListening);
+    if (isListening) {
+      // 停止监听，直接设置状态
+      setIsListening(false);
+      setStatus('已停止识别');
+      
+      // 在下一个渲染周期后清除状态，避免卡顿
+      setTimeout(() => {
+        if (!isListening) {
+          setStatus('');
+        }
+      }, 100);
+    } else {
+      // 开始监听
+      // 如果有之前的结果，尝试保留结果
+      if (!resultRef.current) {
+        // 如果没有之前的结果，清空状态
+        resultRef.current = '';
+        setStatus('');
+      } else {
+        // 如果有之前的结果，我们显示继续状态
+        setStatus(`继续识别 - 已识别: ${resultRef.current}`);
+      }
+      
+      setIsListening(true);
+    }
   };
   
   return (
@@ -221,7 +308,11 @@ const BrowserSpeechRecognition: React.FC<SpeechRecognitionProps> = ({
           } ${!isMicrophoneAvailable ? 'opacity-50' : ''}`}
           disabled={!isMicrophoneAvailable && !!error}
         >
-          {isListening ? '点击停止识别' : '开始语音输入'}
+          {isListening 
+            ? '点击停止识别' 
+            : resultRef.current 
+              ? '继续输入' 
+              : '开始语音输入'}
         </button>
         <div className="text-xs text-gray-400">
           {isListening ? '请说话...' : '点击按钮开始'}
