@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import Head from "next/head";
 
 interface CharacterAnimationProps {
   character: string;
@@ -15,32 +16,137 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
+  const [isPreloading, setIsPreloading] = useState(true);
+  const [preloadProgress, setPreloadProgress] = useState(0);
 
-  useEffect(() => {
+  // 使用useMemo缓存视频源，避免重复计算
+  const videoSrc = useMemo(() => {
     const basePath = process.env.NODE_ENV === "production" && 
                     typeof window !== "undefined" && 
                     window.location.hostname.includes("github.io") 
                     ? "/interaction" : "";
 
-    let videoSrc = "";
     switch (character) {
       case "anime":
-        videoSrc = `${basePath}/animations/anime-character.mp4`;
-        break;
+        return `${basePath}/animations/anime-character.mp4`;
       case "custom":
-        videoSrc = `${basePath}/animations/custom-character.mp4`;
-        break;
+        return `${basePath}/animations/custom-character.mp4`;
       default:
-        videoSrc = `${basePath}/animations/default-character.mp4`;
-        break;
+        return `${basePath}/animations/default-character.mp4`;
     }
+  }, [character]);
 
-    console.log("Video source path:", videoSrc);
-
-    if (videoRef.current) {
-      videoRef.current.src = videoSrc;
-      videoRef.current.load();
+  // 预加载视频并缓存
+  useEffect(() => {
+    // 如果不在浏览器环境中，不执行预加载
+    if (typeof window === "undefined") return;
+    
+    // 检查缓存
+    const videoCache = localStorage.getItem(`video-cache-${videoSrc}`);
+    if (videoCache) {
+      try {
+        console.log("Using cached video");
+        setIsPreloading(false);
+        if (videoRef.current) {
+          videoRef.current.src = videoCache;
+          videoRef.current.load();
+        }
+        return;
+      } catch (err) {
+        console.error("Failed to use cached video:", err);
+        // 缓存失效，继续预加载
+        localStorage.removeItem(`video-cache-${videoSrc}`);
+      }
     }
+    
+    console.log("Preloading video:", videoSrc);
+    setIsPreloading(true);
+    setPreloadProgress(0);
+    
+    // 使用新的fetch API和Streams API更高效地加载
+    const abortController = new AbortController();
+    let totalBytes = 0;
+    let loadedBytes = 0;
+    
+    fetch(videoSrc, { signal: abortController.signal })
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        totalBytes = parseInt(response.headers.get('Content-Length') || '0', 10);
+        
+        // 创建一个读取流
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('ReadableStream not supported');
+        
+        return new ReadableStream({
+          start(controller) {
+            function push() {
+              reader.read().then(({ done, value }) => {
+                if (done) {
+                  controller.close();
+                  return;
+                }
+                
+                if (value) {
+                  loadedBytes += value.length;
+                  if (totalBytes > 0) {
+                    const progress = Math.round((loadedBytes / totalBytes) * 100);
+                    setPreloadProgress(progress);
+                  }
+                  controller.enqueue(value);
+                }
+                push();
+              }).catch(error => {
+                console.error('Stream reading error:', error);
+                controller.error(error);
+              });
+            }
+            push();
+          }
+        });
+      })
+      .then(stream => new Response(stream))
+      .then(response => response.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        
+        // 保存到缓存
+        try {
+          localStorage.setItem(`video-cache-${videoSrc}`, url);
+        } catch (err) {
+          console.warn("Could not cache video:", err);
+          // 可能是因为LocalStorage空间有限，我们仍然可以继续使用视频
+        }
+        
+        // 设置视频源
+        if (videoRef.current) {
+          videoRef.current.src = url;
+          videoRef.current.load();
+        }
+        
+        setIsPreloading(false);
+        console.log("Video preloaded successfully");
+      })
+      .catch(err => {
+        console.error("Failed to preload video:", err);
+        setVideoError(!!err);
+        setIsPreloading(false);
+        
+        // 失败后尝试正常加载
+        if (videoRef.current) {
+          videoRef.current.src = videoSrc;
+          videoRef.current.load();
+        }
+      });
+    
+    return () => {
+      // 取消预加载请求
+      abortController.abort();
+      // 释放旧的URL对象
+      if (videoRef.current && videoRef.current.src.startsWith('blob:')) {
+        URL.revokeObjectURL(videoRef.current.src);
+      }
+    };
+  }, [videoSrc]);
 
     return () => {
       if (videoRef.current) {
@@ -111,7 +217,22 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
 
   return (
     <div className="relative h-full flex items-center justify-center">
-      {!videoLoaded && !videoError && (
+      <Head>
+        <link rel="preload" href={videoSrc} as="video" type="video/mp4" />
+      </Head>
+      {isPreloading && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-xl text-gray-400 mb-2">加载角色动画中... {preloadProgress}%</div>
+          <div className="w-64 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-blue-500 transition-all duration-300 ease-out" 
+              style={{ width: `${preloadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+      
+      {!isPreloading && !videoLoaded && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-xl text-gray-400">加载角色动画中...</div>
         </div>
