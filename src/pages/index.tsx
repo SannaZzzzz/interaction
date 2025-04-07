@@ -22,8 +22,8 @@ export default function Home() {
       <main className="container mx-auto px-4 py-8">
         <h1 className="text-4xl font-bold text-center mb-8">千万职工共话经典主题活动之AI共话许振超</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+        <div className="flex flex-col items-center gap-8 max-w-[90%] mx-auto">
+          <div className="w-full bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-semibold mb-4">虚拟许振超专家形象</h2>
             <div className="border-2 border-gray-700 rounded-lg aspect-video flex items-center justify-center">
               <CharacterAnimation
@@ -34,7 +34,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="bg-gray-800 rounded-lg shadow-lg p-6">
+          <div className="w-full bg-gray-800 rounded-lg shadow-lg p-6">
             <h2 className="text-2xl font-semibold mb-4">专家对话</h2>
 
             <div className="mb-4 h-64 overflow-y-auto bg-gray-900 rounded-lg p-4">
