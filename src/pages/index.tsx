@@ -40,7 +40,7 @@ export default function Home() {
           </div>
 
           {/* 对话区域 - 右侧，底部对齐，宽度增加一半 */}
-          <div className="absolute bottom-[3%] right-[5%] w-[36%] bg-gray-800 rounded-lg shadow-lg p-3">
+          <div className="absolute bottom-[3%] right-[5%] w-[32%] bg-gray-800 rounded-lg shadow-lg p-3">
             <h2 className="text-xl font-semibold mb-2">专家对话</h2>
 
             <div className="h-32 overflow-y-auto bg-gray-900 rounded-lg p-3 mb-2">
