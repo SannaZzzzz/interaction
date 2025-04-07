@@ -17,3 +17,15 @@ body {
     )
     rgb(var(--background-start-rgb));
 }
+
+/* Edge浏览器兼容样式 */
+.edge-browser video {
+  object-fit: contain !important;
+}
+
+/* 移动设备上的Edge浏览器兼容样式 */
+.mobile.edge-browser video {
+  width: 100% !important;
+  height: auto !important;
+  max-width: 100% !important;
+}
