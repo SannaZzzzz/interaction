@@ -25,7 +25,7 @@
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
   },
-  "description": "这是一个基于网页的应用程序，可以实时识别用户语音输入，通过大模型处理后，以特定角色身份进行语音回复，并播放相应的角色动画。",
+  "description": "AI Character Interaction Application",
   "main": "next.config.js",
   "repository": {
     "type": "git",
