@@ -67,9 +67,19 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   };
 
   useEffect(() => {
+    // 仅在浏览器环境中运行
+    if (typeof window === 'undefined') return;
+    
+    console.log('初始化语音识别组件...');
     const isCompatible = checkCompatibility();
     if (isCompatible) {
       checkMicrophonePermission();
+    }
+    
+    // 检查是否使用了不支持语音识别的浏览器
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      console.error('当前浏览器不支持语音识别API');
+      return;
     }
     
     // 初始化语音识别对象
@@ -77,8 +87,10 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.lang = 'zh-CN';
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      // 使用连续模式，可以在说话过程中持续识别
+      recognitionRef.current.continuous = true;
+      // 允许返回中间结果，这样我们可以在说话过程中看到文字
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.maxAlternatives = 1;
     }
     
@@ -100,8 +112,9 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.lang = 'zh-CN';
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      // 使用连续模式和中间结果
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.maxAlternatives = 1;
     }
     
@@ -109,11 +122,41 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
 
     const recognition = recognitionRef.current;
 
+    // 在useEffect中不可以直接使用useState，所以使用ref来跟踪临时识别结果
+    const tempTranscriptRef = useRef<string>('');
+    
     recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      onResult(transcript);
-      setIsListening(false);
-      setRetryCount(0); // 成功后重置重试计数
+      console.log('收到语音识别结果:', event);
+      
+      let finalTranscript = '';
+      let interimTranscript = '';
+      
+      // 编历所有结果
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript;
+          console.log('最终识别结果:', finalTranscript);
+        } else {
+          interimTranscript += transcript;
+          console.log('中间识别结果:', interimTranscript);
+        }
+      }
+      
+      // 如果有最终结果，则使用它
+      if (finalTranscript !== '') {
+        // 清空临时结果
+        tempTranscriptRef.current = '';
+        onResult(finalTranscript);
+        setIsListening(false);
+        setRetryCount(0); // 成功后重置重试计数
+        setError(''); // 清空错误提示
+      } else if (interimTranscript !== '') {
+        // 更新临时结果引用
+        tempTranscriptRef.current = interimTranscript;
+        // 如果只有中间结果，展示在错误框中
+        setError(`正在识别: ${interimTranscript}...`);
+      }
     };
 
     recognition.onerror = (event: any) => {
@@ -129,20 +172,35 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
           setError('未检测到语音，请重试');
           break;
         case 'aborted':
-          // 对于 aborted 错误，我们可以尝试自动重试几次
+          console.warn('语音识别被中断，详细信息:', event);
+          // 尝试分析中断原因
+          if (tempTranscriptRef.current && tempTranscriptRef.current.length > 0) {
+            // 如果有临时识别内容，可能是用户说话结束引起的正常中断
+            onResult(tempTranscriptRef.current); // 使用最后的临时结果
+            tempTranscriptRef.current = '';
+            setIsListening(false);
+            setRetryCount(0);
+            setError('');
+            return;
+          }
+
+          // 如果没有临时结果，考虑重试
           if (retryCount < 3 && isListening) {
             setRetryCount(prev => prev + 1);
-            setError('语音识别被中断，正在重试...');
+            setError(`语音识别被中断，正在重试 (${retryCount + 1}/3)...`);
             setTimeout(() => {
               try {
+                console.log('尝试重新启动语音识别...');
                 recognition.start();
               } catch (e) {
+                console.error('重试失败:', e);
                 setError('语音识别重试失败，请手动重试');
                 setIsListening(false);
               }
-            }, 500);
+            }, 800); // 增加延迟时间
           } else {
-            setError('语音识别被中断，请重新点击按钮尝试');
+            console.log('语音识别已达到最大重试次数');
+            setError('浏览器可能限制了语音识别功能，请刷新页面或更换浏览器尝试');
             setIsListening(false);
           }
           break;
@@ -161,11 +219,41 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
       }
     };
 
-    recognition.onend = () => {
-      // 只有在非用户主动停止的情况下才需要处理
-      if (isListening && retryCount >= 3) {
+    recognition.onend = (event: Event) => {
+      console.log('语音识别结束:', event);
+      
+      // 如果有临时结果且没有错误，可能是正常结束
+      if (tempTranscriptRef.current && tempTranscriptRef.current.length > 0 && !error) {
+        console.log('使用最后的临时结果:', tempTranscriptRef.current);
+        onResult(tempTranscriptRef.current);
+        tempTranscriptRef.current = '';
         setIsListening(false);
         setRetryCount(0);
+        return;
+      }
+      
+      // 如果还在监听状态但语音识别结束，尝试重新启动
+      if (isListening && retryCount < 3 && (!error || !error.includes('重试失败'))) {
+        setRetryCount(prev => prev + 1);
+        setError(`语音识别意外结束，正在重新启动 (${retryCount + 1}/3)...`);
+        
+        setTimeout(() => {
+          try {
+            recognition.start();
+            console.log('重新启动语音识别成功');
+          } catch (e) {
+            console.error('重新启动语音识别失败:', e);
+            setError('语音识别重新启动失败，请手动重试');
+            setIsListening(false);
+          }
+        }, 500);
+      } else if (isListening && retryCount >= 3) {
+        // 重试次数过多，停止尝试
+        setIsListening(false);
+        setRetryCount(0);
+        if (!error) {
+          setError('语音识别多次自动重试失败，请刷新页面或更换浏览器');
+        }
       }
     };
 
