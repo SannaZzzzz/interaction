@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
 import AudioRecorder from '../components/AudioRecorder';
 import CharacterAnimation from '../components/CharacterAnimation';
@@ -9,7 +9,13 @@ export default function Home() {
   const [aiResponse, setAiResponse] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const character = 'default'; // 默认使用默认角色
+  
+  // 仅在客户端渲染
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white">
@@ -62,11 +68,13 @@ export default function Home() {
             </div>
 
             <div className="mt-auto">
-              <AudioRecorder
-                onResult={setUserInput}
-                isRecording={isRecording}
-                setIsRecording={setIsRecording}
-              />
+              {isClient && (
+                <AudioRecorder
+                  onResult={setUserInput}
+                  isRecording={isRecording}
+                  setIsRecording={setIsRecording}
+                />
+              )}
 
               <AIResponse
                 userInput={userInput}
@@ -116,11 +124,13 @@ export default function Home() {
             </div>
 
             <div className="mt-2">
-              <AudioRecorder
-                onResult={setUserInput}
-                isRecording={isRecording}
-                setIsRecording={setIsRecording}
-              />
+              {isClient && (
+                <AudioRecorder
+                  onResult={setUserInput}
+                  isRecording={isRecording}
+                  setIsRecording={setIsRecording}
+                />
+              )}
 
               <AIResponse
                 userInput={userInput}

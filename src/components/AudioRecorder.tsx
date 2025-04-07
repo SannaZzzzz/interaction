@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { xfyunSpeechRecognition } from '../utils/xfyunSpeechRecognition';
 
+// 为TypeScript定义全局类型
+declare global {
+  interface Window {
+    AudioContext: typeof AudioContext;
+    webkitAudioContext: typeof AudioContext;
+  }
+}
+
 interface AudioRecorderProps {
   onResult: (transcript: string) => void;
   isRecording: boolean;
@@ -100,18 +108,21 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
       const wavBlob = await convertToMonoWav(audioBlob);
       console.log('发送音频进行识别，大小:', wavBlob.size, 'bytes');
       
+      // 获取实例并注册回调
+      const speechRecognition = xfyunSpeechRecognition.getInstance();
+      
       // 注册实时结果回调
-      xfyunSpeechRecognition.onResult((partialResult) => {
+      speechRecognition.onResult((partialResult) => {
         setStatus(`正在识别: ${partialResult}`);
       });
       
       // 注册错误回调
-      xfyunSpeechRecognition.onError((errorMsg) => {
+      speechRecognition.onError((errorMsg) => {
         setError(`语音识别错误: ${errorMsg}`);
       });
       
       // 发送音频到讯飞API进行识别
-      const result = await xfyunSpeechRecognition.recognize(wavBlob);
+      const result = await speechRecognition.recognize(wavBlob);
       
       setStatus('识别完成');
       setIsProcessingAudio(false);
@@ -135,7 +146,9 @@ const AudioRecorder: React.FC<AudioRecorderProps> = ({
           const arrayBuffer = fileReader.result as ArrayBuffer;
           
           // 创建临时的 AudioContext
-const audioContext = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+// 兼容不同浏览器的AudioContext
+const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+const audioContext = new AudioContextClass();
           
           // 解码音频
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);

@@ -202,5 +202,24 @@ class XFYunSpeechRecognition {
   }
 }
 
-// 导出单例
-export const xfyunSpeechRecognition = new XFYunSpeechRecognition(xfyunConfig);
+// 安全创建单例
+let _instance: XFYunSpeechRecognition | null = null;
+
+export const xfyunSpeechRecognition = {
+  getInstance: () => {
+    if (typeof window === 'undefined') {
+      // 在服务器端返回一个空对象
+      return {
+        recognize: async () => '',
+        close: () => {},
+        onResult: () => {},
+        onError: () => {}
+      };
+    }
+    
+    if (!_instance) {
+      _instance = new XFYunSpeechRecognition(xfyunConfig);
+    }
+    return _instance;
+  }
+};
