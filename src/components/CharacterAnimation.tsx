@@ -11,18 +11,11 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   isAnimating,
   response
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const animationFrameRef = useRef<number>();
+  const [videoError, setVideoError] = useState(false);
 
   useEffect(() => {
-    const video = document.createElement("video");
-    videoRef.current = video;
-    video.muted = true;
-    video.playsInline = true;
-    video.loop = true;
-
     const basePath = process.env.NODE_ENV === "production" && 
                     typeof window !== "undefined" && 
                     window.location.hostname.includes("github.io") 
@@ -43,100 +36,101 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
 
     console.log("Video source path:", videoSrc);
 
-    video.onloadeddata = () => {
-      setVideoLoaded(true);
-      console.log("Video loaded successfully");
-    };
-
-    video.onerror = (e) => {
-      console.error("Video load error:", e);
-      if (!basePath && typeof window !== "undefined" && window.location.hostname.includes("github.io")) {
-        const fallbackPath = "/interaction/animations/default-character.mp4";
-        console.log("Trying fallback path:", fallbackPath);
-        video.src = fallbackPath;
+    if (videoRef.current) {
+      videoRef.current.src = videoSrc;
+      
+      // 预加载视频
+      videoRef.current.load();
+      
+      // 使用较低分辨率和帧率提高性能
+      if (typeof videoRef.current.playbackRate === 'number') {
+        videoRef.current.playbackRate = 1.0; // 正常速度
       }
-    };
-
-    video.src = videoSrc;
-    video.load();
+    }
 
     return () => {
-      if (video) {
-        video.pause();
-        video.src = "";
-        video.load();
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (videoRef.current) {
+        videoRef.current.pause();
+        videoRef.current.src = "";
+        videoRef.current.load();
       }
     };
   }, [character]);
 
   useEffect(() => {
-    if (!videoLoaded || !videoRef.current || !canvasRef.current) return;
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const video = videoRef.current;
-
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 360;
+    if (!videoRef.current) return;
 
     if (isAnimating) {
-      video.currentTime = 0;
-
+      // 重置视频到开始位置
+      videoRef.current.currentTime = 0;
+      
       const playVideo = async () => {
         try {
-          await video.play();
-          console.log("Video playing");
+          // 使用低延迟模式
+          if (videoRef.current) {
+            videoRef.current.muted = false;
+            await videoRef.current.play();
+            console.log("Video playing");
+          }
         } catch (err) {
           console.error("Video play failed:", err);
+          setVideoError(true);
         }
       };
 
       playVideo();
-
-      const renderFrame = () => {
-        if (!isAnimating) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        animationFrameRef.current = requestAnimationFrame(renderFrame);
-      };
-
-      renderFrame();
     } else {
-      video.pause();
-      if (video.readyState >= 2) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
+      if (videoRef.current) {
+        videoRef.current.pause();
       }
     }
+  }, [isAnimating]);
 
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isAnimating, videoLoaded]);
+  const handleVideoLoaded = () => {
+    setVideoLoaded(true);
+    setVideoError(false);
+    console.log("Video loaded successfully");
+  };
+
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.error("Video load error:", e);
+    setVideoError(true);
+    
+    // 尝试使用绝对路径作为回退
+    if (videoRef.current && typeof window !== "undefined" && window.location.hostname.includes("github.io")) {
+      const fallbackPath = "/interaction/animations/default-character.mp4";
+      console.log("Trying fallback path:", fallbackPath);
+      videoRef.current.src = fallbackPath;
+      videoRef.current.load();
+    }
+  };
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
-      {!videoLoaded && (
+      {!videoLoaded && !videoError && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-xl text-gray-400">加载角色动画中...</div>
         </div>
       )}
-      <canvas
-        ref={canvasRef}
+      
+      {videoError && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-xl text-red-400">动画加载失败，请刷新页面重试</div>
+        </div>
+      )}
+      
+      <video
+        ref={videoRef}
         className="max-w-full max-h-full object-contain"
+        playsInline
+        muted={!isAnimating}
+        loop={isAnimating}
+        onLoadedData={handleVideoLoaded}
+        onError={handleVideoError}
+        style={{ display: videoLoaded ? 'block' : 'none' }}
       />
-      {isAnimating && (
+      
+      {isAnimating && videoLoaded && (
         <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 p-2 rounded">
           <p className="text-sm">{response}</p>
         </div>
