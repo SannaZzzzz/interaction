@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
-import BrowserSpeechRecognition from '../components/BrowserSpeechRecognition';
+import SimpleSpeechRecognition from '../components/SimpleSpeechRecognition';
 import CharacterAnimation from '../components/CharacterAnimation';
 import AIResponse from '../components/AIResponse';
 
@@ -69,7 +69,7 @@ export default function Home() {
 
             <div className="mt-auto">
               {isClient && (
-                <BrowserSpeechRecognition
+                <SimpleSpeechRecognition
                   onResult={setUserInput}
                   isListening={isListening}
                   setIsListening={setIsListening}
@@ -125,7 +125,7 @@ export default function Home() {
 
             <div className="mt-2">
               {isClient && (
-                <BrowserSpeechRecognition
+                <SimpleSpeechRecognition
                   onResult={setUserInput}
                   isListening={isListening}
                   setIsListening={setIsListening}
