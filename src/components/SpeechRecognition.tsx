@@ -73,12 +73,13 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
     }
     
     // 初始化语音识别对象
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.lang = 'zh-CN';
       recognitionRef.current.continuous = false;
       recognitionRef.current.interimResults = false;
+      recognitionRef.current.maxAlternatives = 1;
     }
     
     // 组件卸载时清理
@@ -94,6 +95,16 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
   }, []);
 
   useEffect(() => {
+    // 在每次监听状态变化时重新创建识别对象，以避免状态不一致
+    if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.lang = 'zh-CN';
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.maxAlternatives = 1;
+    }
+    
     if (!isMicrophoneAvailable || !recognitionRef.current) return;
 
     const recognition = recognitionRef.current;
@@ -160,17 +171,34 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
 
     if (isListening) {
       try {
-        // 尝试先停止现有实例，防止多个实例同时运行
-        try {
-          recognition.stop();
-        } catch (e) {
-          // 忽略未启动时停止的错误
-        }
-        
-        // 短暂延迟后启动
-        setTimeout(() => {
-          recognition.start();
-        }, 100);
+        // 确保我们可以访问麦克风
+        checkMicrophonePermission().then(hasPermission => {
+          if (!hasPermission) {
+            setIsListening(false);
+            return;
+          }
+          
+          // 尝试先停止现有实例，防止多个实例同时运行
+          try {
+            recognition.stop();
+          } catch (e) {
+            // 忽略未启动时停止的错误
+            console.log('停止现有实例时出错（可忽略）:', e);
+          }
+          
+          // 短暂延迟后启动
+          setTimeout(() => {
+            console.log('尝试启动语音识别...');
+            try {
+              recognition.start();
+              console.log('语音识别已启动');
+            } catch (e) {
+              console.error('启动语音识别失败:', e);
+              setError(`启动语音识别失败: ${e.message || '未知错误'}，请刷新页面重试`);
+              setIsListening(false);
+            }
+          }, 300);
+        });
       } catch (e) {
         console.error('启动语音识别失败:', e);
         setError('启动语音识别失败，请刷新页面重试');
@@ -191,16 +219,27 @@ const SpeechRecognition: React.FC<SpeechRecognitionProps> = ({
     setError('');
     setRetryCount(0);
     
-    // 如果麦克风不可用，先检查权限
-    if (!isMicrophoneAvailable) {
-      const permissionGranted = await checkMicrophonePermission();
-      if (!permissionGranted) return;
-    }
+    console.log('处理开始监听请求...');
     
     // 检查兼容性
-    if (!checkCompatibility()) return;
+    if (!checkCompatibility()) {
+      console.error('浏览器兼容性检查失败');
+      return;
+    }
+    
+    // 如果麦克风不可用，先检查权限
+    if (!isMicrophoneAvailable) {
+      console.log('麦克风权限未授予，尝试请求权限...');
+      const permissionGranted = await checkMicrophonePermission();
+      if (!permissionGranted) {
+        console.error('麦克风权限请求被拒绝');
+        return;
+      }
+      console.log('麦克风权限已授予');
+    }
 
     // 切换听状态
+    console.log(`切换监听状态: ${!isListening ? '开始监听' : '停止监听'}`);
     setIsListening(!isListening);
   };
 
