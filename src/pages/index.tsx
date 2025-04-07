@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import Head from 'next/head';
-import SpeechRecognition from '../components/SpeechRecognition';
+import AudioRecorder from '../components/AudioRecorder';
 import CharacterAnimation from '../components/CharacterAnimation';
 import AIResponse from '../components/AIResponse';
 
 export default function Home() {
   const [userInput, setUserInput] = useState('');
   const [aiResponse, setAiResponse] = useState('');
-  const [isListening, setIsListening] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const character = 'default'; // 默认使用默认角色
 
@@ -62,10 +62,10 @@ export default function Home() {
             </div>
 
             <div className="mt-auto">
-              <SpeechRecognition
+              <AudioRecorder
                 onResult={setUserInput}
-                isListening={isListening}
-                setIsListening={setIsListening}
+                isRecording={isRecording}
+                setIsRecording={setIsRecording}
               />
 
               <AIResponse
@@ -116,10 +116,10 @@ export default function Home() {
             </div>
 
             <div className="mt-2">
-              <SpeechRecognition
+              <AudioRecorder
                 onResult={setUserInput}
-                isListening={isListening}
-                setIsListening={setIsListening}
+                isRecording={isRecording}
+                setIsRecording={setIsRecording}
               />
 
               <AIResponse
