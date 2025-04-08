@@ -20,13 +20,13 @@ export default function Home() {
       </Head>
 
       <main className="container mx-auto px-4 py-8">
-        <h1 className="text-4xl font-bold text-center mb-8">千万职工共话经典主题活动之AI共话许振超</h1>
+        <h1 className="text-4xl font-bold text-center mb-8">千万职工共读经典主题活动之AI共读</h1>
 
         <div className="relative w-full h-[85vh] max-w-[98%] mx-auto">
           {/* 动画区域 - 更靠左 */}
           <div className="absolute top-[2%] left-[35%] transform -translate-x-1/2 w-auto h-[90%] flex flex-col items-center">
             {/* 将标题放在动画框上方中央 */}
-            <h2 className="text-2xl font-semibold mb-2 text-center">虚拟许振超专家形象</h2>
+            <h2 className="text-2xl font-semibold mb-2 text-center">专家形象：虚拟许振超</h2>
             
             <div className="bg-gray-800 rounded-lg shadow-lg p-3 h-full">
               <div className="border-2 border-gray-700 rounded-lg flex items-center justify-center h-full overflow-hidden">
