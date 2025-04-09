@@ -4,7 +4,8 @@ import Head from 'next/head';
 import '../styles/globals.css';
 
 function MyApp({ Component, pageProps }: AppProps) {
-  // 注册service worker以支持PWA
+  // PWA相关代码在Vercel上可能导致问题，我们先注释掉
+  /*
   useEffect(() => {
     if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
       window.addEventListener('load', function() {
@@ -19,6 +20,7 @@ function MyApp({ Component, pageProps }: AppProps) {
       });
     }
   }, []);
+  */
 
   return (
     <>
