@@ -65,23 +65,27 @@ export default function Home() {
         </div>
 
         {isMobile ? (
-          // 移动端布局 - 使用栈式布局
-          <div className="grid grid-cols-1 gap-4">
-            <div className="tech-card rounded-xl bg-gray-800 p-4">
+          // 移动端布局 - 使用栈式布局并调整组件大小与对齐
+          <div className="flex flex-col items-center">
+            {/* 动画容器 - 缩小至屏幕80%宽度 */}
+            <div className="tech-card rounded-xl bg-gray-800 p-3 w-[80%] mb-4">
               <h2 className="text-xl font-semibold mb-3 flex items-center">
                 <span className="inline-block w-2 h-2 bg-tech-blue rounded-full mr-2 animate-pulse"></span>
                 专家形象：虚拟许振超
               </h2>
-              <div className="border-2 border-opacity-40 border-tech-blue rounded-lg aspect-video flex items-center justify-center glowing-border overflow-hidden">
-                <CharacterAnimation
-                  character={character}
-                  isAnimating={isAnimating}
-                  response={aiResponse}
-                />
+              <div className="border-2 border-opacity-40 border-tech-blue rounded-lg flex items-center justify-center glowing-border overflow-hidden aspect-video">
+                <div className="w-full h-full scale-90 transform origin-center">
+                  <CharacterAnimation
+                    character={character}
+                    isAnimating={isAnimating}
+                    response={aiResponse}
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="tech-card rounded-xl bg-gray-800 p-4">
+            {/* 对话框 - 与动画容器相同宽度 */}
+            <div className="tech-card rounded-xl bg-gray-800 p-3 w-[80%]">
               <h2 className="text-xl font-semibold mb-3 flex items-center">
                 <span className="inline-block w-2 h-2 bg-tech-blue rounded-full mr-2 animate-pulse"></span>
                 专家对话
