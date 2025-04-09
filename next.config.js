@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  // 确保Vercel部署时正确处理路径
-  basePath: process.env.VERCEL_URL ? '' : process.env.NODE_ENV === 'production' ? '/interaction' : '',
+  // Vercel需要去掉output配置才能正确部署
+  // output: 'export',
+  // 去掉basePath以便适应Vercel部署
+  // basePath: process.env.VERCEL_URL ? '' : process.env.NODE_ENV === 'production' ? '/interaction' : '',
   images: {
     unoptimized: true
   },
