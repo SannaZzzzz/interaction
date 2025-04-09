@@ -67,14 +67,15 @@ export default function Home() {
         {isMobile ? (
           // 移动端布局 - 使用栈式布局并调整组件大小与对齐
           <div className="flex flex-col items-center">
-            {/* 动画容器 - 缩小至屏幕80%宽度 */}
+            {/* 动画容器 - 缩小至屏幕80%宽度，高度自适应 */}
             <div className="tech-card rounded-xl bg-gray-800 p-3 w-[80%] mb-4">
               <h2 className="text-xl font-semibold mb-3 flex items-center">
                 <span className="inline-block w-2 h-2 bg-tech-blue rounded-full mr-2 animate-pulse"></span>
                 专家形象：虚拟许振超
               </h2>
-              <div className="border-2 border-opacity-40 border-tech-blue rounded-lg flex items-center justify-center glowing-border overflow-hidden aspect-video">
-                <div className="w-full h-full scale-90 transform origin-center">
+              <div className="border-2 border-opacity-40 border-tech-blue rounded-lg flex items-center justify-center glowing-border overflow-hidden w-full">
+                {/* 去掉fixed aspect ratio，让高度自适应内容 */}
+                <div className="w-full">
                   <CharacterAnimation
                     character={character}
                     isAnimating={isAnimating}
