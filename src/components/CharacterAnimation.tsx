@@ -15,6 +15,25 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const animationFrameRef = useRef<number>();
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动设备
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // 初始检测
+    handleResize();
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   useEffect(() => {
     const video = document.createElement("video");
@@ -43,12 +62,23 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
 
     console.log("Video source path:", videoSrc);
 
+    // 模拟加载进度
+    const loadingInterval = setInterval(() => {
+      setLoadingProgress(prev => {
+        const newProgress = prev + Math.random() * 10;
+        return newProgress >= 100 ? 100 : newProgress;
+      });
+    }, 200);
+
     video.onloadeddata = () => {
+      clearInterval(loadingInterval);
+      setLoadingProgress(100);
       setVideoLoaded(true);
       console.log("Video loaded successfully");
     };
 
     video.onerror = (e) => {
+      clearInterval(loadingInterval);
       console.error("Video load error:", e);
       if (!basePath && typeof window !== "undefined" && window.location.hostname.includes("github.io")) {
         const fallbackPath = "/interaction/animations/default-character.mp4";
@@ -61,6 +91,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
     video.load();
 
     return () => {
+      clearInterval(loadingInterval);
       if (video) {
         video.pause();
         video.src = "";
@@ -102,7 +133,20 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
         if (!isAnimating) return;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 设置科技感效果
+        ctx.save();
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // 为视频添加科技感特效 - 淡蓝色边缘光晕
+        ctx.globalCompositeOperation = 'screen';
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.5)';
+        ctx.shadowBlur = 8;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        
         animationFrameRef.current = requestAnimationFrame(renderFrame);
       };
 
@@ -112,6 +156,16 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       if (video.readyState >= 2) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // 静态下也添加科技感边框
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.3)';
+        ctx.shadowBlur = 5;
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
       }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
@@ -126,19 +180,41 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   }, [isAnimating, videoLoaded]);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
+    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
       {!videoLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-xl text-gray-400">加载角色动画中...</div>
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-tech-dark bg-opacity-50 backdrop-filter backdrop-blur-sm z-10">
+          <div className="w-16 h-16 relative mb-3">
+            <div className="absolute inset-0 rounded-full border-2 border-tech-blue opacity-20"></div>
+            <div 
+              className="absolute inset-0 rounded-full border-2 border-transparent border-t-tech-blue animate-spin"
+              style={{ animationDuration: '1s' }}
+            ></div>
+          </div>
+          <div className="text-lg text-tech-blue font-medium">加载角色动画中...</div>
+          <div className="w-48 h-2 bg-gray-800 rounded-full mt-2 overflow-hidden">
+            <div 
+              className="h-full bg-tech-blue transition-all duration-200 rounded-full"
+              style={{ width: `${loadingProgress}%` }}
+            ></div>
+          </div>
+          <div className="text-xs text-gray-400 mt-1">{Math.floor(loadingProgress)}%</div>
         </div>
       )}
+      
+      {/* 装饰性科技边角 */}
+      <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-tech-blue opacity-70"></div>
+      <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-tech-blue opacity-70"></div>
+      <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-tech-blue opacity-70"></div>
+      <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-tech-blue opacity-70"></div>
+      
       <canvas
         ref={canvasRef}
-        className="max-w-full max-h-full object-contain"
+        className="max-w-full max-h-full object-contain rounded-sm"
       />
+      
       {isAnimating && (
-        <div className="absolute bottom-4 left-4 right-4 bg-black bg-opacity-70 p-2 rounded">
-          <p className="text-sm">{response}</p>
+        <div className="absolute bottom-4 left-4 right-4 bg-tech-dark bg-opacity-80 backdrop-filter backdrop-blur-sm p-2 rounded-md border border-tech-blue border-opacity-30 shadow-neon">
+          <p className="text-sm md:text-base text-gray-200">{response}</p>
         </div>
       )}
     </div>

@@ -1,6 +1,35 @@
-import '../styles/globals.css';
+import { useEffect } from 'react';
 import type { AppProps } from 'next/app';
+import Head from 'next/head';
+import '../styles/globals.css';
 
-export default function App({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />;
+function MyApp({ Component, pageProps }: AppProps) {
+  // 注册service worker以支持PWA
+  useEffect(() => {
+    if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js').then(
+          function(registration) {
+            console.log('Service Worker 注册成功，范围为:', registration.scope);
+          },
+          function(err) {
+            console.log('Service Worker 注册失败:', err);
+          }
+        );
+      });
+    }
+  }, []);
+
+  return (
+    <>
+      <Head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+        <meta name="theme-color" content="#38bdf8" />
+        <link rel="manifest" href="/manifest.json" />
+      </Head>
+      <Component {...pageProps} />
+    </>
+  );
 }
+
+export default MyApp;
