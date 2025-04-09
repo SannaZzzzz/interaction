@@ -12,19 +12,17 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   response
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const animationFrameRef = useRef<number>();
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // 检测移动设备
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      adjustCanvasSize();
     };
     
     // 初始检测
@@ -37,21 +35,6 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       window.removeEventListener('resize', handleResize);
     };
   }, []);
-
-  // 调整Canvas大小以适应容器
-  const adjustCanvasSize = () => {
-    if (!containerRef.current || !videoRef.current || !canvasRef.current) return;
-    
-    const containerWidth = containerRef.current.clientWidth;
-    const videoWidth = videoRef.current.videoWidth || 640;
-    const videoHeight = videoRef.current.videoHeight || 360;
-    
-    // 计算等比例高度
-    const aspectRatio = videoHeight / videoWidth;
-    const newHeight = containerWidth * aspectRatio;
-    
-    setCanvasSize({ width: containerWidth, height: newHeight });
-  };
 
   useEffect(() => {
     const video = document.createElement("video");
@@ -93,9 +76,6 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       setLoadingProgress(100);
       setVideoLoaded(true);
       console.log("Video loaded successfully");
-      
-      // 视频加载完成后调整Canvas大小
-      setTimeout(adjustCanvasSize, 100);
     };
 
     video.onerror = (e) => {
@@ -133,13 +113,19 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
 
     const video = videoRef.current;
 
-    // 使用计算好的大小
-    if (canvasSize.width > 0 && canvasSize.height > 0) {
-      canvas.width = canvasSize.width;
-      canvas.height = canvasSize.height;
-    } else {
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 360;
+    // 设置Canvas初始尺寸
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 360;
+
+    // 如果是移动设备，则调整Canvas大小以适应容器宽度
+    if (isMobile && containerRef.current) {
+      const containerWidth = containerRef.current.clientWidth;
+      // 保持视频的原始宽高比
+      const aspectRatio = canvas.width / canvas.height;
+      
+      // 设置宽度为容器宽度，高度根据宽高比计算
+      canvas.style.width = '100%';
+      canvas.style.height = 'auto';
     }
 
     if (isAnimating) {
@@ -204,10 +190,10 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, videoLoaded, canvasSize]);
+  }, [isAnimating, videoLoaded, isMobile]);
 
   return (
-    <div ref={containerRef} className="relative w-full flex items-center justify-center overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
       {!videoLoaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-tech-dark bg-opacity-50 backdrop-filter backdrop-blur-sm z-10">
           <div className="w-16 h-16 relative mb-3">
@@ -236,8 +222,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       
       <canvas
         ref={canvasRef}
-        className="w-full object-contain rounded-sm"
-        style={{ height: canvasSize.height > 0 ? `${canvasSize.height}px` : 'auto' }}
+        className="w-full h-auto object-contain rounded-sm"
       />
       
       {isAnimating && (
