@@ -18,6 +18,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [videoAspectRatio, setVideoAspectRatio] = useState(16/9); // 默认视频比例
 
   // 检测移动设备
   useEffect(() => {
@@ -76,6 +77,10 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       setLoadingProgress(100);
       setVideoLoaded(true);
       console.log("Video loaded successfully");
+      // 保存视频的原始宽高比
+      if (video.videoWidth && video.videoHeight) {
+        setVideoAspectRatio(video.videoWidth / video.videoHeight);
+      }
     };
 
     video.onerror = (e) => {
@@ -126,6 +131,23 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       // 设置宽度为容器宽度，高度根据宽高比计算
       canvas.style.width = '100%';
       canvas.style.height = 'auto';
+    } else if (!isMobile && containerRef.current) {
+      // 桌面端处理 - 让动画等比例填充容器高度
+      const containerHeight = containerRef.current.clientHeight;
+      const containerWidth = containerRef.current.clientWidth;
+
+      // 计算容器的宽高比
+      const containerAspectRatio = containerWidth / containerHeight;
+
+      if (videoAspectRatio > containerAspectRatio) {
+        // 如果视频更宽，则高度100%，宽度自适应
+        canvas.style.height = '100%';
+        canvas.style.width = 'auto';
+      } else {
+        // 如果视频更高，则宽度100%，高度自适应
+        canvas.style.width = '100%';
+        canvas.style.height = 'auto';
+      }
     }
 
     if (isAnimating) {
@@ -190,7 +212,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isAnimating, videoLoaded, isMobile]);
+  }, [isAnimating, videoLoaded, isMobile, videoAspectRatio]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full flex items-center justify-center overflow-hidden">
@@ -222,7 +244,7 @@ const CharacterAnimation: React.FC<CharacterAnimationProps> = ({
       
       <canvas
         ref={canvasRef}
-        className="w-full h-auto object-contain rounded-sm"
+        className={`object-contain rounded-sm ${isMobile ? 'w-full h-auto' : 'h-full'}`}
       />
       
       {isAnimating && (
